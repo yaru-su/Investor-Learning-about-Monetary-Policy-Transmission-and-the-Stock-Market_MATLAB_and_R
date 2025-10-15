@@ -6,9 +6,9 @@ Delta=1/12; %data frequency
 
 %% extract data and create timetable
 
-% -----------------------------------
+% =========================================================================
 % 1. Output Gap
-% ======================================================================
+% =========================================================================
 DataGap = readtimetable('data/OutputGapData'); % Read quarterly output gap data
 DataGap.Properties.VariableNames = {'OutputGapQSimple'}; % Rename the variable
 DataGap.Properties.DimensionNames{1} = 'date'; 
@@ -20,17 +20,17 @@ End = datetime(2023, 12, 1);
 DataGapMonthly = retime(DataGap(:, {'OutputGapQ'}), Beg:calmonths(1):End, 'next'); % Convert quarterly data to monthly by assigning the quarterly value to each month of the quarter
 DataGapMonthly.Properties.VariableNames = {'OutputGap'}; % Rename the variable for monthly timetable
 
-% ======================================================================
+% =========================================================================
 % 2. Federal Funds Rate
-% ======================================================================
+% =========================================================================
 DataFedFunds = readtimetable('data/FEDFUNDS'); % Read monthly federal funds rate data
 DataFedFunds.Properties.VariableNames = {'fedfundsimple'}; % Rename the variable
 DataFedFunds.Properties.DimensionNames{1} = 'date'; 
 DataFedFunds.fedfund = log(1 + DataFedFunds.fedfundsimple/100); % Convert nominal monthly rate to annualized continuously compounded rate
 
-% ======================================================================
+% =========================================================================
 % 3. Goyal-Welch monthly data
-% ======================================================================
+% =========================================================================
 DataGoyal1 = readmatrix("data/GoyalWelch"); % Read raw monthly data from CSV
 dateStr = num2str(DataGoyal1(:,1));       % Convert numeric date to string
 years = str2num(dateStr(:,1:4));          % Extract year
@@ -44,9 +44,9 @@ DataGoyal.inflation = 12*movavg(log(1 + DataGoyal.infl), 'simple', 12, 'fill'); 
 DataGoyal.retnom = log(1 + DataGoyal.sp_vw); % Compute continuously compounded S&P 500 return
 DataGoyal = DataGoyal(:, ["retnom", "d12", "index", "inflation"]); % Keep only relevant columns
 
-% ======================================================================
+% =========================================================================
 % 4. Real GDP data
-% ======================================================================
+% =========================================================================
 DataGDP = readtimetable('data/RealGDP'); % Read annual real GDP data
 DataGDP.Properties.VariableNames = {'gdp'}; % Rename the variable to 'gdp'
 DataGDP.Properties.DimensionNames{1} = 'date'; % Rename the row dimension to 'date'
@@ -60,9 +60,9 @@ DataGDPMonthly.Properties.VariableNames = {'GDPGrowth'}; % Rename the variable f
 
 %% Download additional variables
 
-% ======================================================================
-% 5. Daily data
-% ======================================================================
+% =========================================================================
+% 5. Monthly Financial Risk and Equity Premium Data
+% =========================================================================
 
 % Martin Equity Risk Premium (ERP)
 DataMartinDaily=readtimetable('data/epbound_Martin.csv');%daily
@@ -77,9 +77,9 @@ DataVIXDaily=readtimetable('data/VIX.csv');%daily
 DataVIXMonthly = retime(DataVIXDaily,'monthly','lastvalue'); %last value of the month
 DataVIXMonthly.VIX = DataVIXMonthly.VIX/100;
 
-% ======================================================================
+% =========================================================================
 % 6. GDP growth forecast (median)
-% ======================================================================
+% =========================================================================
 GDPgrowthForecastData = readtable('data/Median_RGDP_Growth.csv');
 % Convert to datetime, assuming quarters are Mar, June, Sept, Dec
 GDPgrowthForecastData.date = datetime(GDPgrowthForecastData.YEAR, GDPgrowthForecastData.QUARTER * 3, 1);
@@ -100,9 +100,9 @@ DataGDPgrowthForecastMonthly=DataGDPgrowthForecastMonthly(:,"DRGDP2");
 % Rename the column 'DRGDP2' to 'mudelta' for easier reference
 DataGDPgrowthForecastMonthly = renamevars(DataGDPgrowthForecastMonthly, {'DRGDP2'},{'mudelta'});
 
-% ======================================================================
+% =========================================================================
 % 7. Inflation Expectations Cleveland Fed
-% ======================================================================
+% =========================================================================
 %dates at the end have a different format for whatever reason, hence the code below
 % Detect structure of the file
 opts = detectImportOptions('data/InflationExpectationsClevelandFed.csv');
@@ -123,9 +123,9 @@ DataInflationExpectationMonthly.date=dates;
 % Convert to timetable
 DataInflationExpectationMonthly=table2timetable(DataInflationExpectationMonthly);
 
-% ======================================================================
+% =========================================================================
 % 8. Monetary Policy Uncertainty, MPU
-% ======================================================================
+% =========================================================================
 MPUData = readtable('data/MPU.csv'); %monetary policy uncertainty Bloom
 MPUData.date = datetime(MPUData.Year, MPUData.Month, 1);
 % Convert to timetable
@@ -135,9 +135,9 @@ DataMPUMonthly.Month=[];
 % Convert the MPU index from percentage to decimal format
 DataMPUMonthly=DataMPUMonthly./100;
 
-% ======================================================================
-% 9. Monetary Policy Uncertainty, MPU
-% ======================================================================
+% =========================================================================
+% 9. 5-Year CPI Forecast Data
+% =========================================================================
 CPI5YRForecastData = readtable('data/Median_CPI5YR.csv');
 % Convert to datetime, assuming quarters are Mar, June, Sept, Dec
 CPI5YRForecastData.date = datetime(CPI5YRForecastData.YEAR, CPI5YRForecastData.QUARTER * 3, 1);
