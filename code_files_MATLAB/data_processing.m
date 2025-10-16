@@ -63,7 +63,6 @@ DataGDPMonthly.Properties.VariableNames = {'GDPGrowth'}; % Rename the variable f
 % =========================================================================
 % 5. Monthly Financial Risk and Equity Premium Data
 % =========================================================================
-
 % Martin Equity Risk Premium (ERP)
 DataMartinDaily=readtimetable('data/epbound_Martin.csv');%daily
 DataRPMartinMonthly = retime(DataMartinDaily,'monthly','lastvalue'); %last value of the month
@@ -103,7 +102,7 @@ DataGDPgrowthForecastMonthly = renamevars(DataGDPgrowthForecastMonthly, {'DRGDP2
 % =========================================================================
 % 7. Inflation Expectations Cleveland Fed
 % =========================================================================
-%dates at the end have a different format for whatever reason, hence the code below
+% Dates at the end have a different format for whatever reason, hence the code below
 % Detect structure of the file
 opts = detectImportOptions('data/InflationExpectationsClevelandFed.csv');
 % Force the first column (date column) to be read as string
@@ -156,7 +155,7 @@ DataCPI5YRForecastMonthly=DataCPI5YRForecastMonthly./100;
 
 
 %% merge data in single monthly timetable
-
+% List of all monthly datasets
 TT_list = {
     DataGDPMonthly, DataFedFunds, DataGoyal, DataGapMonthly,DataVIXMonthly, DataRPChabiYoMonthly, ...
     DataRPMartinMonthly, DataGDPgrowthForecastMonthly,DataInflationExpectationMonthly,DataMPUMonthly,DataCPI5YRForecastMonthly
@@ -169,6 +168,7 @@ for i = 2:length(TT_list)
     TTFull = synchronize(TTFull, TT_list{i});
 end
 
+% Restrict to the sample period (1954-07-01 to 2023-12-01)
 tr=timerange('1954-07-01','2023-12-01','closed');
 TT=TTFull(tr,:); %final timetable over '1954-07-01':'2023-12-01' sample
 TT.date.Format='yyyy-MM-dd';
