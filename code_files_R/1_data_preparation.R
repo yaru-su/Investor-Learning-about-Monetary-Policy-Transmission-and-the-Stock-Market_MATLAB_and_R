@@ -142,8 +142,8 @@ DataMartinDaily <- DataMartinDaily %>%
 DataChabiYoDaily <- DataChabiYoDaily %>%
   mutate(date = dmy(date))
 
-DataVIXDaily <- DataVIXDaily %>%
-  mutate(date = dmy(date))
+DataVIXDaily <- read_csv("VIX.csv") %>%
+  mutate(date = as.Date(date))
 
 # Convert to monthly (last value of the month)
 DataRPMartinMonthly <- DataMartinDaily %>%
