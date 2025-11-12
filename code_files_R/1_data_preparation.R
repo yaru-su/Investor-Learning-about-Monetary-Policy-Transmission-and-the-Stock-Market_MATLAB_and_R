@@ -28,25 +28,27 @@ setwd("/Users/yarusu/Library/CloudStorage/OneDrive-UCSanDiego/DS/ML project/Andr
 # 1. Output Gap
 # ------------------------------------------------------------------------------
 DataGap <- read_excel("OutputGapData.xlsx")
-colnames(DataGap) <- c("date", "OutputGapQSimple") # Rename variable for consistency
-DataGap$date <- ymd(DataGap$date) # Convert 'date' column to date type
-DataGap$date <- DataGap$date %m+% months(2) # Adjust the date by adding 2 months (e.g., Jan→Mar, Apr→Jun, Jul→Sep, Oct→Dec)
+colnames(DataGap) <- c("date", "OutputGapQSimple")
 
-# Convert to continuously compounded annualized output gap
+# Convert to Date and shift +2 months (to middle month of quarter)
+DataGap$date <- ymd(DataGap$date) %m+% months(2)
+
+# Convert to continuously compounded form
 DataGap <- DataGap %>%
-  mutate(OutputGapQ = log(1 + OutputGapQSimple / 100)) 
+  mutate(OutputGapQ = log(1 + OutputGapQSimple / 100))
 
-# Define start and end dates
-Beg <- min(DataGap$date) 
+# Define time range
+Beg <- min(DataGap$date)
 End <- ymd("2023-12-01")
 
-# Keep the same quarterly value for each month within that quarter
+# Create full monthly sequence
 DataGapMonthly <- DataGap %>%
-  complete(date = seq.Date(Beg, End, by = "month")) %>%   # Create a complete monthly sequence
-  fill(OutputGapQ, .direction = "down") %>% # Fill forward the last known quarterly value
-  select(date, OutputGapQ)
+  complete(date = seq.Date(Beg, End, by = "month")) %>%
+  fill(OutputGapQ, .direction = "up") %>%
+  select(date, OutputGapQ) %>%
+  filter(date <= ymd("2023-12-01"))
 
-colnames(DataGapMonthly) <- c("date", "OutputGap") # Rename variable
+colnames(DataGapMonthly) <- c("date", "OutputGap")
 
 # ------------------------------------------------------------------------------
 # 2. Federal Funds Rate
@@ -114,15 +116,15 @@ DataGDP <- DataGDP %>%
   )
 
 # Convert annual GDP growth to monthly
-Beg <- min(DataGDP$date)
-End <- as.Date("2023-12-01")
+Beg <- min(DataGDP$date, na.rm = TRUE)
+End <- max(DataGDP$date, na.rm = TRUE)
 all_months <- seq(Beg, End, by = "month") # Generate monthly sequence
 
 # Fill each month with the corresponding annual GDP growth
 DataGDPMonthly <- data.frame(date = all_months) %>%
   left_join(DataGDP %>% select(date, GDPGrowthY), by = "date") %>%
-  fill(GDPGrowthY, .direction = "down") %>%   
-  rename(GDPGrowth = GDPGrowthY)  
+  fill(GDPGrowthY, .direction = "up") %>%   
+  rename(GDPGrowth = GDPGrowthY) 
 
 # ==============================================================================
 # Download additional variables
@@ -137,31 +139,34 @@ DataVIXDaily <- read_csv("VIX.csv")                 # daily
 
 # Ensure the date column is Date type
 DataMartinDaily <- DataMartinDaily %>%
-  mutate(date = dmy(date))  
+  mutate(date = mdy(date))  
 
 DataChabiYoDaily <- DataChabiYoDaily %>%
-  mutate(date = dmy(date))
+  mutate(date = mdy(date))
 
 DataVIXDaily <- read_csv("VIX.csv") %>%
-  mutate(date = as.Date(date))
+  mutate(date = ymd(date))
 
 # Convert to monthly (last value of the month)
+# Martin ERP
 DataRPMartinMonthly <- DataMartinDaily %>%
-  group_by(month = floor_date(date, "month")) %>%
-  summarise(across(-date, last, .names = "{.col}")) %>%
-  ungroup() %>%
+  mutate(month = floor_date(date, "month")) %>%
+  group_by(month) %>%
+  summarise(across(-date, ~ last(.x[!is.na(.x)]), .names = "{.col}"), .groups = "drop") %>%
   rename(date = month)
 
+# Chabi-Yo ERP
 DataRPChabiYoMonthly <- DataChabiYoDaily %>%
-  group_by(month = floor_date(date, "month")) %>%
-  summarise(across(-date, last, .names = "{.col}")) %>%
-  ungroup() %>%
+  mutate(month = floor_date(date, "month")) %>%
+  group_by(month) %>%
+  summarise(across(-date, ~ last(.x[!is.na(.x)]), .names = "{.col}"), .groups = "drop") %>%
   rename(date = month)
 
+# VIX
 DataVIXMonthly <- DataVIXDaily %>%
-  group_by(month = floor_date(date, "month")) %>%
-  summarise(across(-date, last, .names = "{.col}")) %>%
-  ungroup() %>%
+  mutate(month = floor_date(date, "month")) %>%     
+  group_by(month) %>%
+  summarise(VIX = last(VIX[!is.na(VIX)]), .groups = "drop") %>%  
   rename(date = month) %>%
   mutate(VIX = VIX / 100)
 
@@ -247,7 +252,8 @@ MPUData$date <- as.Date(
 # Convert to tibble and clean up
 DataMPUMonthly <- MPUData %>%
   select(-Year, -Month) %>%   # remove Year and Month columns
-  mutate(across(-date, ~ .x / 100))  # divide all numeric variables by 100
+  mutate(across(-date, ~ .x / 100)) %>%  # divide all numeric variables by 100
+  drop_na() 
 
 # ------------------------------------------------------------------------------
 # 9. 5-Year CPI Forecast Data
@@ -255,24 +261,20 @@ DataMPUMonthly <- MPUData %>%
 CPI5YRForecastData <- read.csv("Median_CPI5YR.csv")
 
 # Create date column assuming quarters end in Mar, Jun, Sep, Dec
-CPI5YRForecastData$date <- as.Date(
-  paste(CPI5YRForecastData$YEAR, CPI5YRForecastData$QUARTER * 3, "01", sep = "-"),
-  format = "%Y-%m-%d"
-)
-
-# Convert to tibble and clean up
-DataCPI5YRForecast <- CPI5YRForecastData %>%
-  select(-YEAR, -QUARTER)
+CPI5YRForecastData <- CPI5YRForecastData %>%
+  mutate(date = make_date(YEAR, QUARTER * 3, 1)) %>%
+  select(-YEAR, -QUARTER) # Convert to tibble and clean up
 
 # Define monthly sequence from first to last date
-Beg <- min(DataCPI5YRForecast$date, na.rm = TRUE)
-End <- max(DataCPI5YRForecast$date, na.rm = TRUE)
+Beg <- min(CPI5YRForecastData$date, na.rm = TRUE)
+End <- max(CPI5YRForecastData$date, na.rm = TRUE)
 
 # Convert quarterly to monthly data — take next available value (same logic as MATLAB 'retime(..., "next")')
-DataCPI5YRForecastMonthly <- DataCPI5YRForecast %>%
-  complete(date = seq(Beg, End, by = "month")) %>%  # fill monthly sequence
-  fill(everything(), .direction = "down") %>%        # propagate next available value
-  mutate(across(-date, ~ .x / 100))                  # divide by 100 (continuously compounded style)
+DataCPI5YRForecastMonthly <- CPI5YRForecastData %>%
+  complete(date = seq(Beg, End, by = "month")) %>% # fill monthly sequence
+  arrange(date) %>%
+  fill(CPI5YR, .direction = "up") %>%   # propagate next available value
+  mutate(CPI5YR = CPI5YR / 100)   # divide by 100 (continuously compounded style)
 
 # ==============================================================================
 # Merge All Monthly Datasets into One Unified DataFrame
@@ -316,3 +318,62 @@ TT <- TT %>%
     dp = log(d12 / index),                  # log dividend-price ratio
     pd = -dp                                # log price-dividend ratio
   )
+
+# ==============================================================================
+# Descriptive statistics
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1.	Dataset Overview
+# ------------------------------------------------------------------------------
+
+# Sample Size
+sample_info <- data.frame(
+  Metric = c("Start Date", "End Date", "Number of Observations", "Number of Variables"),
+  Value = c(
+    as.character(min(TT$date, na.rm = TRUE)),
+    as.character(max(TT$date, na.rm = TRUE)),
+    nrow(TT),
+    ncol(TT)
+  )
+)
+sample_info
+
+# Missingness Summary
+library(knitr)
+
+na_summary <- TT %>%
+  summarise(across(everything(), ~ sum(is.na(.)))) %>%
+  pivot_longer(cols = everything(), names_to = "Variable", values_to = "Missing_Count") %>%
+  mutate(
+    Missing_Percent = round(Missing_Count / nrow(TT) * 100, 2)
+  ) %>%
+  arrange(desc(Missing_Percent))
+
+kable(na_summary, caption = "Missing Values for All 64 Variables in TT Dataset")
+
+# ------------------------------------------------------------------------------
+# 2.	Variable-Level Statistics
+# ------------------------------------------------------------------------------
+library(moments)
+
+TT_numeric <- TT %>% select(where(is.numeric))
+
+desc_stats <- lapply(TT_numeric, function(x) {
+  data.frame(
+    n = sum(!is.na(x)),
+    mean = mean(x, na.rm = TRUE),
+    median = median(x, na.rm = TRUE),
+    sd = sd(x, na.rm = TRUE),
+    min = min(x, na.rm = TRUE),
+    max = max(x, na.rm = TRUE),
+    skewness = ifelse(sum(!is.na(x)) > 2, skewness(x, na.rm = TRUE), NA),
+    kurtosis = ifelse(sum(!is.na(x)) > 3, kurtosis(x, na.rm = TRUE), NA)
+  )
+}) %>%
+  bind_rows(.id = "Variable")
+
+desc_stats <- desc_stats %>%
+  mutate(across(where(is.numeric), ~ round(., 4)))
+
+desc_stats
