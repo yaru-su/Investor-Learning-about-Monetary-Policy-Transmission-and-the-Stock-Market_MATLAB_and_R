@@ -3,20 +3,12 @@
 # Purpose : Compute the variance-covariance matrix of parameters 
 #           using the outer-product of likelihood gradients.
 # -------------------------------------------------------------
-# Arguments:
-#   outputgap : vector of observed output gap data
-#   param     : parameter vector (c(sigmay, lambday))
-# -------------------------------------------------------------
-# Dependencies:
-#   Requires LikelihoodFuncy() to be defined separately.
-# -------------------------------------------------------------
-
 GetVarMatrixParam_y <- function(outputgap, param) {
   # Small perturbation for finite differences (two-sided derivative)
   myDelta <- 1e-15 * abs(param)
   
   # Evaluate log-likelihood at the current parameter
-  ll_current <- LikelihoodFuncy(outputgap, param)
+  ll_current <- LikelihoodFunc_y(outputgap, param)
   logLikVec1 <- ll_current$logLik  # vector of log-likelihoods per observation
   
   n <- length(logLikVec1)
@@ -28,7 +20,7 @@ GetVarMatrixParam_y <- function(outputgap, param) {
     vec <- param
     vec[i] <- param[i] + myDelta[i]  # perturb parameter i
     
-    ll_perturbed <- LikelihoodFuncy(outputgap, vec)
+    ll_perturbed <- LikelihoodFunc_y(outputgap, vec)
     logLikVec2 <- ll_perturbed$logLik
     
     # Compute numerical derivative (first derivative of log-likelihood)

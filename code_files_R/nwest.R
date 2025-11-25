@@ -25,10 +25,6 @@
 #   results$CovMatBeta     = covariance matrix
 #   results$nobs, results$nvar, results$y
 # ================================================================
-# References:
-#   Hamilton (1994), Time Series Analysis, Princeton University Press
-#   Newey & West (1987), Econometrica 55: 347–370
-# ================================================================
 
 nwest <- function(y, x, nlag = 0) {
   if (missing(y) || missing(x) || missing(nlag)) {

@@ -9,13 +9,6 @@ GetVarMatrixParam <- function(inflation, fedfund, param) {
   #   (2) First partial derivatives (Outer Product Matrix)
   #   (3) White covariance matrix (NOT USED)
   #   (4) Newey-West covariance matrix (NOT USED)
-  #
-  # References:
-  #   Hamilton, J.D. (1994). "Time Series Analysis", Princeton University Press.
-  #   Newey, W. & West, K. (1987). "A Simple, Positive Semidefinite,
-  #   Heteroskedasticity and Autocorrelation Consistent Covariance Matrix",
-  #   Econometrica, 55, 347–370.
-  #   White, H. (1984). "Asymptotic Theory for Econometricians", Academic Press.
   # --------------------------------------------------------------
   
   # Small perturbation for finite difference derivative approximation

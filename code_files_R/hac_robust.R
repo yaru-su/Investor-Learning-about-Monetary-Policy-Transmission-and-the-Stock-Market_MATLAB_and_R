@@ -12,10 +12,6 @@
 #   tab_data : data.frame with columns
 #     Coeff | SE | tStat | pVal | AdjR2 | Nobs
 # ================================================================
-# REQUIREMENTS:
-#   library(lmtest)
-#   library(sandwich)
-# ================================================================
 
 hac_robust <- function(reg) {
   # --- 1. Extract residuals ---

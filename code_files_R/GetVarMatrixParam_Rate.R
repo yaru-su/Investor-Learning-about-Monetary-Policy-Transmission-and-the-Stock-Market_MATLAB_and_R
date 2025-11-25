@@ -9,11 +9,6 @@ GetVarMatrixParam_Rate <- function(fedfund, inflation, outputgap, param) {
   # (2) First derivatives (outer product matrix) [used]
   # (3) White covariance matrix (not used)
   # (4) Newey-West covariance matrix (not used)
-  #
-  # References:
-  # Hamilton, J.D. (1994). *Time Series Analysis*. Princeton University Press.
-  # Newey, W. & West, K. (1987). *Econometrica*, 55(3), 347–370.
-  # White, H. (1984). *Asymptotic Theory for Econometricians*. Academic Press.
   # --------------------------------------------------------------
   
   # Small perturbation for finite difference derivative approximation
