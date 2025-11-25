@@ -156,10 +156,16 @@ DataRPMartinMonthly <- DataMartinDaily %>%
   rename(date = month)
 
 # Chabi-Yo ERP
-DataRPChabiYoMonthly <- DataChabiYoDaily %>%
+DataRPChabiYoMonthly <- DataChabiYoDaily %>% 
   mutate(month = floor_date(date, "month")) %>%
   group_by(month) %>%
-  summarise(across(-date, ~ last(.x[!is.na(.x)]), .names = "{.col}"), .groups = "drop") %>%
+  summarise(across(
+    -date,
+    ~ {
+      v = .x
+      if (all(is.na(v))) NA_real_ else v[max(which(!is.na(v)))]
+    }
+  )) %>%
   rename(date = month)
 
 # VIX
@@ -196,7 +202,7 @@ monthly_dates <- seq.Date(beg, end, by = "month")
 DataGDPgrowthForecastMonthly <- tibble(date = monthly_dates) %>%
   left_join(DataGDPgrowthForecast, by = "date") %>%
   arrange(date) %>%
-  fill(DRGDP2, .direction = "down")  # last value carried forward
+  fill(DRGDP2, .direction = "up")  # last value carried forward
 
 # Convert to continuously compounded growth
 DataGDPgrowthForecastMonthly <- DataGDPgrowthForecastMonthly %>%
