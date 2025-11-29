@@ -63,24 +63,20 @@ p <- ggplot() +
   geom_line(data = TT_long, aes(x = date, y = value), 
             color = "blue", size = 0.6) +
   geom_text(data = chair_labels, aes(x = date, y = value, label = label),
-            size = 2.5, color = "black") +
+            size = 4, color = "black") +
   facet_grid(variable ~ ., scales = "free_y", switch = "y",
              labeller = labeller(variable = facet_labels)) +
   scale_x_date(expand = c(0, 0), date_breaks = "10 years", date_labels = "%Y") +
   scale_y_continuous(n.breaks = 4) + 
-  labs(x = NULL, y = NULL, 
-       title = "Figure 1: GDP Growth, Output Gap, Inflation, and Federal Funds Rate") +
+  labs(x = NULL, y = NULL, title = NULL) +
   theme_bw() +
   theme(
     strip.background = element_blank(), 
     strip.placement = "outside",        
-    strip.text.y.left = element_text(size = 10, color = "black", angle = 90), 
-
-    plot.title = element_text(face = "bold", size = 14, margin = margin(b = 10)),
-
+    strip.text.y.left = element_text(size = 12, color = "black", angle = 90, face = "bold"), 
+    axis.text = element_text(size = 11, color = "black"),
+    panel.grid.major = element_line(color = "grey90"),
     panel.grid.minor = element_blank(),
-    panel.grid.major = element_line(color = "grey"),
-
     panel.border = element_rect(color = "black", fill = NA)
   )
 
@@ -399,7 +395,6 @@ TT$a <- out_paper$a
 TT$LTMpi <- out_paper$LTMpifinal
 
 # Prepare Fed Chair tenure data (for background shading)
-# Define start and end dates for each Chair
 fed_chairs <- data.frame(
   Chair = c("Martin", "Burns", "Miller", "Volcker", "Greenspan", "Bernanke", "Yellen", "Powell"),
   Start = as.Date(c("1951-04-02", "1970-02-01", "1978-03-08", "1979-08-06", "1987-08-11", "2006-02-01", "2014-02-03", "2018-02-05")),
@@ -409,10 +404,9 @@ fed_chairs <- data.frame(
 # Keep only Chairs within the sample period (post-1954)
 fed_chairs$Start <- pmax(fed_chairs$Start, min(TT$date))
 fed_chairs$End   <- pmin(fed_chairs$End, max(TT$date))
+fed_chairs$Midpoint <- fed_chairs$Start + (fed_chairs$End - fed_chairs$Start)/2
 
 # Select every other Chair (2, 4, 6, 8) for alternating shading (Burns, Volcker, Bernanke, Powell)
-# Or Martin, Miller, Greenspan, Yellen (light colors)
-# In the paper's figure: Burns, Volcker, Bernanke, Powell have dark backgrounds
 shading_data <- fed_chairs[c(2, 4, 6, 8), ]
 
 # Set dual-axis scaling coefficient
@@ -465,14 +459,14 @@ p <- ggplot() +
   ) +
   
   # Add Chair names (Optional, manually adjust y position)
-  annotate("text", x = as.Date("1960-01-01"), y = 0.65, label = "Martin", size = 3, color="grey40") +
-  annotate("text", x = as.Date("1974-01-01"), y = 0.65, label = "Burns", size = 3, color="grey40") +
-  annotate("text", x = as.Date("1978-09-01"), y = 0.65, label = "Miller", size = 3, color="grey40", angle=90) +
-  annotate("text", x = as.Date("1983-01-01"), y = 0.65, label = "Volcker", size = 3, color="grey40") +
-  annotate("text", x = as.Date("1996-01-01"), y = 0.65, label = "Greenspan", size = 3, color="grey40") +
-  annotate("text", x = as.Date("2010-01-01"), y = 0.65, label = "Bernanke", size = 3, color="grey40") +
-  annotate("text", x = as.Date("2016-01-01"), y = 0.65, label = "Yellen", size = 3, color="grey40") +
-  annotate("text", x = as.Date("2021-01-01"), y = 0.65, label = "Powell", size = 3, color="grey40")
+  annotate("text", x = as.Date("1960-01-01"), y = 0.65, label = "Martin", size = 4, color="grey40") +
+  annotate("text", x = as.Date("1974-01-01"), y = 0.65, label = "Burns", size = 4, color="grey40") +
+  annotate("text", x = as.Date("1978-09-01"), y = 0.65, label = "Miller", size = 4, color="grey40", angle=90) +
+  annotate("text", x = as.Date("1983-01-01"), y = 0.65, label = "Volcker", size = 4, color="grey40") +
+  annotate("text", x = as.Date("1996-01-01"), y = 0.65, label = "Greenspan", size = 4, color="grey40") +
+  annotate("text", x = as.Date("2010-01-01"), y = 0.65, label = "Bernanke", size = 4, color="grey40") +
+  annotate("text", x = as.Date("2016-01-01"), y = 0.65, label = "Yellen", size = 4, color="grey40") +
+  annotate("text", x = as.Date("2021-01-01"), y = 0.65, label = "Powell", size = 4, color="grey40")
 
 print(p)
 ggsave("Figure2_Replication.png", p, width = 10, height = 5, dpi = 300)
@@ -482,28 +476,68 @@ ggsave("Figure2_Replication.png", p, width = 10, height = 5, dpi = 300)
 # 7. Figure 3: Monetary Policy Stance and Long-Term Inflation Drift
 # ==============================================================================
 
-# Save the figure as a PNG
-png("Figure3_MonetaryPolicy_LTMInflation_R.png", width = 10, height = 8, units = "in", res = 300)
+# Top Panel: phi
+shading_data <- fed_chairs[c(2, 4, 6, 8), ]
+chair_labels_top <- data.frame(
+  date = fed_chairs$Midpoint,
+  value = 0.07,  
+  label = fed_chairs$Chair
+)
 
-# Set margins and layout (2 rows, 1 column)
-par(mfrow = c(2, 1), mar = c(4, 4, 2, 2) + 0.1)
+p1 <- ggplot() +
+  geom_rect(data = shading_data, 
+            aes(xmin = Start, xmax = End, ymin = -Inf, ymax = Inf),
+            fill = "grey80", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "gray60", linetype = "dashed") +
+  geom_line(data = TT, aes(x = date, y = phi), color = "blue", size = 0.6) +
+  geom_text(data = chair_labels_top, aes(x = date, y = value, label = label),
+            size = 3.5, color = "black") + 
+  scale_y_continuous(
+    name = expression(paste("Monetary policy stance ", phi[t])),
+    breaks = seq(-0.02, 0.06, by = 0.02), 
+    labels = function(x) sprintf("%.2f", x) 
+  ) +
+  scale_x_date(expand = c(0, 0), date_breaks = "10 years", date_labels = "%Y") +
+  
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    panel.border = element_rect(color = "black", fill = NA),
+    axis.title.x = element_blank(), 
+    axis.text.x = element_blank(),  
+    axis.text.y = element_text(size = 11, color = "black"),
+    axis.title.y = element_text(size = 12, color = "black"),
+    plot.margin = margin(b = 5, unit = "pt")
+  )
 
-# First panel
-plot(TT$date, TT$phi,
-     type = "l", col = "blue", lwd = 2,
-     ylab = expression("Monetary policy stance " * phi[t]),
-     xlab = "Date")
-abline(h = 0, col = "gray60", lty = 2)  # reference line at φ_t = 0
+# Bottom Panel: LTMpi
+p2 <- ggplot() +
+  geom_rect(data = shading_data, 
+            aes(xmin = Start, xmax = End, ymin = -Inf, ymax = Inf),
+            fill = "grey80", alpha = 0.5) +
+  geom_hline(yintercept = mean(TT$LTMpi, na.rm=TRUE), color = "gray60", linetype = "dashed") +
+  geom_line(data = TT, aes(x = date, y = LTMpi), color = "blue", size = 0.6) +
+  scale_y_continuous(
+    name = expression(paste("Long-term inflation drift ", hat(pi)[t]^A)),
+    breaks = seq(0, 0.15, by = 0.05),
+    limits = c(-0.02, 0.16)
+  ) +
+  scale_x_date(expand = c(0, 0), date_breaks = "10 years", date_labels = "%Y") +
+  
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    panel.border = element_rect(color = "black", fill = NA),
+    axis.text = element_text(size = 11, color = "black"),
+    axis.title.y = element_text(size = 12, color = "black"),
+    axis.title.x = element_blank(),
+    plot.margin = margin(t = 5, unit = "pt")
+  )
 
-# Second panel
-plot(TT$date, TT$LTMpi,
-     type = "l", col = "red", lwd = 2,
-     ylab = expression("Long-term inflation drift " * hat(pi)[t]^A),
-     xlab = "Date")
-abline(h = mean(TT$LTMpi, na.rm = TRUE), col = "gray60", lty = 2)  # mean reference line
+combined_plot <- p1 / p2
 
-# Close PNG device (save file)
-dev.off()
+print(combined_plot)
+ggsave("Figure3_Replication.png", combined_plot, width = 10, height = 8, dpi = 300)
 
 
 # ==============================================================================
@@ -581,24 +615,17 @@ cat("Mean annualized S&P500 excess return:", meanSP, "\n")
 cat("Annualized volatility of S&P500 excess return:", volSP, "\n")
 
 # ------------------------------------------------------------------------------
-# B. Model-Implied Time Series (from Mathematica output)
+# B. Model-Implied Moments (Transferred from Mathematica Solution)
 # ------------------------------------------------------------------------------
-# Load model-implied data (from Mathematica export)
-DataModel <- read.csv("data/ModelImpliedTimeSeriesNov2024.csv")
+# NOTE: Instead of importing the old benchmark CSV, I use the specific moments generated by the Mathematica solver using R-estimated parameters 
+meanrfreal_model <- 0.010633  # From Mathematica Out[250]
+meanrfnom_model  <- 0.044433  # From Mathematica Out[251]
+meanSP_model     <- 0.069954  # From Mathematica Out[260] (RP ~ 7.00%)
+volSP_model      <- 0.125672  # From Mathematica Out[261] (Vol ~ 12.57%)
 
-# Align model-implied data with empirical sample dates
-DataModel$date <- TT$date   # ensure same timeline as empirical TT
-
-# Convert to tibble for easy manipulation
-library(tibbletime)
-TTmodel <- as_tibble(DataModel)
-
-# Compute model-implied moments (annualized, consistent with part (a))
-meanrfreal_model <- mean(TTmodel$rfreal, na.rm = TRUE)
-meanrfnom_model  <- mean(TTmodel$rfnom,  na.rm = TRUE)
-meanSP_model     <- mean(TTmodel$RP,     na.rm = TRUE)
-volSP_model      <- mean(TTmodel$vol,    na.rm = TRUE)
-
+# ------------------------------------------------------------------------------
+# C. Create and Display Table
+# ------------------------------------------------------------------------------
 # Combine Data vs Model results into a summary table
 Table4 <- data.frame(
   Moment = c("Real interest rate",
@@ -609,7 +636,7 @@ Table4 <- data.frame(
   Model = c(meanrfreal_model, meanrfnom_model, meanSP_model, volSP_model)
 )
 
-# Display final table (rounded)
+# Display final table (rounded to 4 decimal places)
 cat("\nTable 4: Asset-pricing Moments\n")
 Table4[, 2:3] <- round(Table4[, 2:3], 4)
 print(Table4)
@@ -1157,7 +1184,7 @@ tab_data
 # 16. Table 9: Predictive regressions for future realized excess returns
 # ==============================================================================
 # Set horizon (n = 1, 5, or 10)
-n <- 10  
+n <- 1  
 
 # Subset data to match sample period (Jan 1982 - Dec 2023)
 idx_sample <- which(TT$date >= as.Date("1982-01-01") & TT$date <= as.Date("2023-12-31"))
